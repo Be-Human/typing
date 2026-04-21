@@ -284,7 +284,7 @@
     </div>
 
     <script>
-        const articles = [
+        const allArticles = [
             "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the alphabet at least once.",
             "Programming is the art of telling a computer what to do through a set of instructions called code.",
             "Technology has revolutionized the way we communicate, work, and live our daily lives.",
@@ -294,9 +294,25 @@
             "Exercise is essential for maintaining good physical health and mental well-being.",
             "Music has the power to evoke emotions, bring people together, and transcend cultural boundaries.",
             "Nature provides us with beautiful landscapes, fresh air, and the resources we need to survive.",
-            "Creativity is the ability to imagine new possibilities and transform ideas into reality."
+            "Creativity is the ability to imagine new possibilities and transform ideas into reality.",
+            "The Internet has become an integral part of modern society, connecting people across the globe in ways never imagined before.",
+            "Artificial intelligence continues to advance rapidly, transforming industries and creating new possibilities for innovation.",
+            "Sustainable development requires balancing economic growth with environmental protection and social equity for future generations.",
+            "Space exploration opens new frontiers of knowledge, inspiring scientists and dreamers alike to reach for the stars.",
+            "Education is the most powerful weapon which you can use to change the world and build a better future.",
+            "Healthy eating habits combined with regular physical activity are fundamental to maintaining overall wellness and longevity.",
+            "Renewable energy sources like solar, wind, and hydroelectric power offer sustainable alternatives to fossil fuels.",
+            "Effective communication skills are essential in both personal and professional relationships, fostering understanding and collaboration.",
+            "The history of human civilization is a fascinating journey marked by innovation, conflict, cultural exchange, and progress.",
+            "Meditation and mindfulness practices can help reduce stress, improve focus, and promote emotional balance in daily life.",
+            "Digital literacy has become a crucial skill in the 21st century, enabling individuals to navigate and thrive in an increasingly online world.",
+            "Global cooperation is essential for addressing pressing challenges such as climate change, pandemics, and economic inequality.",
+            "Entrepreneurship drives economic growth by encouraging innovation, creating jobs, and bringing new products and services to market.",
+            "Psychological research reveals the complex workings of the human mind, shedding light on behavior, emotions, and cognitive processes.",
+            "Conservation efforts aim to protect endangered species and preserve biodiversity, maintaining the delicate balance of ecosystems worldwide."
         ];
 
+        let articleQueue = [];
         let currentText = '';
         let startTime = null;
         let timerInterval = null;
@@ -305,6 +321,9 @@
         let totalCharsTyped = 0;
         let correctCharsTyped = 0;
         let incorrectCharsTyped = 0;
+        let accumulatedTotalChars = 0;
+        let accumulatedCorrectChars = 0;
+        let accumulatedIncorrectChars = 0;
 
         const textDisplay = document.getElementById('text-display');
         const typingInput = document.getElementById('typing-input');
@@ -321,6 +340,26 @@
         const incorrectCharsElement = document.getElementById('incorrect-chars');
         const restartBtn = document.getElementById('restart-btn');
 
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function initArticleQueue() {
+            articleQueue = shuffleArray(allArticles);
+        }
+
+        function getNextArticle() {
+            if (articleQueue.length === 0) {
+                initArticleQueue();
+            }
+            return articleQueue.shift();
+        }
+
         function initGame() {
             typingInput.value = '';
             timeLeft = 60;
@@ -328,6 +367,9 @@
             totalCharsTyped = 0;
             correctCharsTyped = 0;
             incorrectCharsTyped = 0;
+            accumulatedTotalChars = 0;
+            accumulatedCorrectChars = 0;
+            accumulatedIncorrectChars = 0;
             startTime = null;
 
             if (timerInterval) {
@@ -335,8 +377,8 @@
                 timerInterval = null;
             }
 
-            const randomIndex = Math.floor(Math.random() * articles.length);
-            currentText = articles[randomIndex];
+            initArticleQueue();
+            currentText = getNextArticle();
             renderText();
             updateStats();
             updateTimer();
@@ -348,6 +390,30 @@
             resultsArea.classList.add('hidden');
 
             typingInput.disabled = false;
+            typingInput.focus();
+        }
+
+        function switchToNextArticle() {
+            const typedText = typingInput.value;
+            
+            let correct = 0;
+            let incorrect = 0;
+            for (let i = 0; i < typedText.length; i++) {
+                if (typedText[i] === currentText[i]) {
+                    correct++;
+                } else {
+                    incorrect++;
+                }
+            }
+            
+            accumulatedTotalChars += typedText.length;
+            accumulatedCorrectChars += correct;
+            accumulatedIncorrectChars += incorrect;
+
+            currentText = getNextArticle();
+            typingInput.value = '';
+            renderText();
+            updateStats();
             typingInput.focus();
         }
 
@@ -379,31 +445,31 @@
         function updateStats() {
             const typedText = typingInput.value;
             
-            let correct = 0;
-            let incorrect = 0;
+            let currentCorrect = 0;
+            let currentIncorrect = 0;
 
             for (let i = 0; i < typedText.length; i++) {
                 if (typedText[i] === currentText[i]) {
-                    correct++;
+                    currentCorrect++;
                 } else {
-                    incorrect++;
+                    currentIncorrect++;
                 }
             }
 
-            totalCharsTyped = typedText.length;
-            correctCharsTyped = correct;
-            incorrectCharsTyped = incorrect;
+            totalCharsTyped = accumulatedTotalChars + typedText.length;
+            correctCharsTyped = accumulatedCorrectChars + currentCorrect;
+            incorrectCharsTyped = accumulatedIncorrectChars + currentIncorrect;
 
             let wpm = 0;
             if (startTime) {
                 const elapsedMinutes = (Date.now() - startTime) / 60000;
                 if (elapsedMinutes > 0) {
-                    const wordsTyped = correct / 5;
+                    const wordsTyped = correctCharsTyped / 5;
                     wpm = Math.round(wordsTyped / elapsedMinutes);
                 }
             }
 
-            const accuracy = typedText.length > 0 ? Math.round((correct / typedText.length) * 100) : 100;
+            const accuracy = totalCharsTyped > 0 ? Math.round((correctCharsTyped / totalCharsTyped) * 100) : 100;
 
             wpmElement.textContent = wpm;
             accuracyElement.textContent = accuracy + '%';
@@ -460,12 +526,24 @@
         }
 
         typingInput.addEventListener('input', (e) => {
+            const typedText = typingInput.value;
+            
+            if (typedText.length > currentText.length) {
+                typingInput.value = typedText.substring(0, currentText.length);
+                e.preventDefault();
+                return;
+            }
+            
             if (!isGameActive) {
                 startTimer();
             }
 
             updateHighlighting();
             updateStats();
+
+            if (typedText.length === currentText.length) {
+                switchToNextArticle();
+            }
         });
 
         typingInput.addEventListener('focus', () => {
