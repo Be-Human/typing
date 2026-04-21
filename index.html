@@ -410,7 +410,11 @@
         function getBestWPM(timeMode) {
             const key = `typing_best_wpm_${timeMode}`;
             const stored = localStorage.getItem(key);
-            return stored ? parseInt(stored) : null;
+            if (stored) {
+                const value = parseInt(stored);
+                return value > 0 ? value : null;
+            }
+            return null;
         }
 
         function setBestWPM(timeMode, wpm) {
