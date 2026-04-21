@@ -38,7 +38,50 @@
         .header h1 {
             color: #333;
             font-size: 2rem;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .time-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .time-btn {
+            background: #e9ecef;
+            color: #495057;
+            border: none;
+            padding: 8px 20px;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .time-btn:hover {
+            background: #dee2e6;
+        }
+
+        .time-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .record-alert {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa502 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         .timer {
@@ -221,6 +264,11 @@
     <div class="container">
         <div class="header">
             <h1>打字速度测试</h1>
+            <div class="time-selector">
+                <button class="time-btn" data-time="30">30秒</button>
+                <button class="time-btn active" data-time="60">60秒</button>
+                <button class="time-btn" data-time="120">120秒</button>
+            </div>
         </div>
 
         <div id="test-area">
@@ -252,10 +300,16 @@
             <div class="results">
                 <h2>测试完成！</h2>
                 
+                <div id="record-alert" class="record-alert hidden">🎉 新纪录！</div>
+                
                 <div class="result-stats">
                     <div class="result-stat">
                         <div class="value" id="final-wpm">0</div>
                         <div class="label">WPM (每分钟字数)</div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="value" id="best-wpm">0</div>
+                        <div class="label">历史最佳</div>
                     </div>
                     <div class="result-stat">
                         <div class="value" id="final-accuracy">0%</div>
@@ -324,6 +378,7 @@
         let accumulatedTotalChars = 0;
         let accumulatedCorrectChars = 0;
         let accumulatedIncorrectChars = 0;
+        let currentTimeMode = 60;
 
         const textDisplay = document.getElementById('text-display');
         const typingInput = document.getElementById('typing-input');
@@ -334,11 +389,14 @@
         const testArea = document.getElementById('test-area');
         const resultsArea = document.getElementById('results-area');
         const finalWpm = document.getElementById('final-wpm');
+        const bestWpm = document.getElementById('best-wpm');
         const finalAccuracy = document.getElementById('final-accuracy');
         const totalCharsElement = document.getElementById('total-chars');
         const correctCharsElement = document.getElementById('correct-chars');
         const incorrectCharsElement = document.getElementById('incorrect-chars');
         const restartBtn = document.getElementById('restart-btn');
+        const recordAlert = document.getElementById('record-alert');
+        const timeButtons = document.querySelectorAll('.time-btn');
 
         function shuffleArray(array) {
             const shuffled = [...array];
@@ -347,6 +405,17 @@
                 [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
             }
             return shuffled;
+        }
+
+        function getBestWPM(timeMode) {
+            const key = `typing_best_wpm_${timeMode}`;
+            const stored = localStorage.getItem(key);
+            return stored ? parseInt(stored) : 0;
+        }
+
+        function setBestWPM(timeMode, wpm) {
+            const key = `typing_best_wpm_${timeMode}`;
+            localStorage.setItem(key, wpm.toString());
         }
 
         function initArticleQueue() {
@@ -362,7 +431,7 @@
 
         function initGame() {
             typingInput.value = '';
-            timeLeft = 60;
+            timeLeft = currentTimeMode;
             isGameActive = false;
             totalCharsTyped = 0;
             correctCharsTyped = 0;
@@ -388,6 +457,7 @@
 
             testArea.classList.remove('hidden');
             resultsArea.classList.add('hidden');
+            recordAlert.classList.add('hidden');
 
             typingInput.disabled = false;
             typingInput.focus();
@@ -477,7 +547,7 @@
 
         function updateTimer() {
             timerElement.textContent = timeLeft;
-            progressFill.style.width = (timeLeft / 60 * 100) + '%';
+            progressFill.style.width = (timeLeft / currentTimeMode * 100) + '%';
 
             if (timeLeft <= 10) {
                 timerElement.classList.add('warning');
@@ -515,7 +585,18 @@
             const wpm = Math.round(wordsTyped / elapsedMinutes);
             const accuracy = totalCharsTyped > 0 ? Math.round((correctCharsTyped / totalCharsTyped) * 100) : 0;
 
+            const currentBest = getBestWPM(currentTimeMode);
+            const isNewRecord = wpm > currentBest;
+
+            if (isNewRecord) {
+                setBestWPM(currentTimeMode, wpm);
+                recordAlert.classList.remove('hidden');
+            } else {
+                recordAlert.classList.add('hidden');
+            }
+
             finalWpm.textContent = wpm;
+            bestWpm.textContent = isNewRecord ? wpm : currentBest;
             finalAccuracy.textContent = accuracy + '%';
             totalCharsElement.textContent = totalCharsTyped;
             correctCharsElement.textContent = correctCharsTyped;
@@ -559,6 +640,20 @@
         });
 
         restartBtn.addEventListener('click', initGame);
+
+        timeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const time = parseInt(button.dataset.time);
+                if (time !== currentTimeMode) {
+                    currentTimeMode = time;
+                    
+                    timeButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    initGame();
+                }
+            });
+        });
 
         initGame();
     </script>
