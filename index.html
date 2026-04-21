@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打字速度测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .timer {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 20px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .timer.warning {
+            color: #ff6b6b;
+        }
+
+        .text-display {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            line-height: 2;
+            font-size: 1.2rem;
+            min-height: 120px;
+            border: 2px solid #e9ecef;
+            transition: border-color 0.3s;
+        }
+
+        .text-display.focus {
+            border-color: #667eea;
+        }
+
+        .char {
+            position: relative;
+            transition: color 0.1s, background-color 0.1s;
+            border-radius: 2px;
+        }
+
+        .char.correct {
+            color: #28a745;
+            background-color: rgba(40, 167, 69, 0.1);
+        }
+
+        .char.incorrect {
+            color: #dc3545;
+            background-color: rgba(220, 53, 69, 0.2);
+        }
+
+        .char.current {
+            background-color: #667eea;
+            color: white;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.7; }
+        }
+
+        .input-area {
+            margin-bottom: 20px;
+        }
+
+        #typing-input {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.2rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        #typing-input:focus {
+            border-color: #667eea;
+        }
+
+        #typing-input:disabled {
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 20px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .results {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .results h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .result-stats {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            margin-bottom: 30px;
+        }
+
+        .result-stat {
+            text-align: center;
+        }
+
+        .result-stat .value {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .result-stat .label {
+            color: #6c757d;
+            font-size: 1rem;
+            margin-top: 5px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>打字速度测试</h1>
+        </div>
+
+        <div id="test-area">
+            <div class="timer" id="timer">60</div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 100%"></div>
+            </div>
+            
+            <div class="text-display" id="text-display"></div>
+            
+            <div class="input-area">
+                <input type="text" id="typing-input" placeholder="点击这里开始打字..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+            </div>
+            
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="wpm">0</div>
+                    <div class="stat-label">WPM</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="accuracy">100%</div>
+                    <div class="stat-label">准确率</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="results-area" class="hidden">
+            <div class="results">
+                <h2>测试完成！</h2>
+                
+                <div class="result-stats">
+                    <div class="result-stat">
+                        <div class="value" id="final-wpm">0</div>
+                        <div class="label">WPM (每分钟字数)</div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="value" id="final-accuracy">0%</div>
+                        <div class="label">准确率</div>
+                    </div>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value" id="total-chars">0</div>
+                        <div class="stat-label">总字符数</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="correct-chars">0</div>
+                        <div class="stat-label">正确字符</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="incorrect-chars">0</div>
+                        <div class="stat-label">错误字符</div>
+                    </div>
+                </div>
+                
+                <button class="btn" id="restart-btn">重新开始</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const articles = [
+            "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the alphabet at least once.",
+            "Programming is the art of telling a computer what to do through a set of instructions called code.",
+            "Technology has revolutionized the way we communicate, work, and live our daily lives.",
+            "Learning a new language opens doors to new cultures, perspectives, and opportunities.",
+            "The sun rises in the east and sets in the west, marking the beginning and end of each day.",
+            "Reading books expands your vocabulary, improves your memory, and enhances your critical thinking skills.",
+            "Exercise is essential for maintaining good physical health and mental well-being.",
+            "Music has the power to evoke emotions, bring people together, and transcend cultural boundaries.",
+            "Nature provides us with beautiful landscapes, fresh air, and the resources we need to survive.",
+            "Creativity is the ability to imagine new possibilities and transform ideas into reality."
+        ];
+
+        let currentText = '';
+        let startTime = null;
+        let timerInterval = null;
+        let timeLeft = 60;
+        let isGameActive = false;
+        let totalCharsTyped = 0;
+        let correctCharsTyped = 0;
+        let incorrectCharsTyped = 0;
+
+        const textDisplay = document.getElementById('text-display');
+        const typingInput = document.getElementById('typing-input');
+        const timerElement = document.getElementById('timer');
+        const progressFill = document.getElementById('progress-fill');
+        const wpmElement = document.getElementById('wpm');
+        const accuracyElement = document.getElementById('accuracy');
+        const testArea = document.getElementById('test-area');
+        const resultsArea = document.getElementById('results-area');
+        const finalWpm = document.getElementById('final-wpm');
+        const finalAccuracy = document.getElementById('final-accuracy');
+        const totalCharsElement = document.getElementById('total-chars');
+        const correctCharsElement = document.getElementById('correct-chars');
+        const incorrectCharsElement = document.getElementById('incorrect-chars');
+        const restartBtn = document.getElementById('restart-btn');
+
+        function initGame() {
+            typingInput.value = '';
+            timeLeft = 60;
+            isGameActive = false;
+            totalCharsTyped = 0;
+            correctCharsTyped = 0;
+            incorrectCharsTyped = 0;
+            startTime = null;
+
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            const randomIndex = Math.floor(Math.random() * articles.length);
+            currentText = articles[randomIndex];
+            renderText();
+            updateStats();
+            updateTimer();
+
+            timerElement.classList.remove('warning');
+            progressFill.style.width = '100%';
+
+            testArea.classList.remove('hidden');
+            resultsArea.classList.add('hidden');
+
+            typingInput.disabled = false;
+            typingInput.focus();
+        }
+
+        function renderText() {
+            textDisplay.innerHTML = currentText.split('').map((char, index) => {
+                return `<span class="char" data-index="${index}">${char}</span>`;
+            }).join('');
+        }
+
+        function updateHighlighting() {
+            const typedText = typingInput.value;
+            const chars = textDisplay.querySelectorAll('.char');
+
+            chars.forEach((charElement, index) => {
+                charElement.classList.remove('correct', 'incorrect', 'current');
+
+                if (index < typedText.length) {
+                    if (typedText[index] === currentText[index]) {
+                        charElement.classList.add('correct');
+                    } else {
+                        charElement.classList.add('incorrect');
+                    }
+                } else if (index === typedText.length) {
+                    charElement.classList.add('current');
+                }
+            });
+        }
+
+        function updateStats() {
+            const typedText = typingInput.value;
+            
+            let correct = 0;
+            let incorrect = 0;
+
+            for (let i = 0; i < typedText.length; i++) {
+                if (typedText[i] === currentText[i]) {
+                    correct++;
+                } else {
+                    incorrect++;
+                }
+            }
+
+            totalCharsTyped = typedText.length;
+            correctCharsTyped = correct;
+            incorrectCharsTyped = incorrect;
+
+            let wpm = 0;
+            if (startTime) {
+                const elapsedMinutes = (Date.now() - startTime) / 60000;
+                if (elapsedMinutes > 0) {
+                    const wordsTyped = correct / 5;
+                    wpm = Math.round(wordsTyped / elapsedMinutes);
+                }
+            }
+
+            const accuracy = typedText.length > 0 ? Math.round((correct / typedText.length) * 100) : 100;
+
+            wpmElement.textContent = wpm;
+            accuracyElement.textContent = accuracy + '%';
+        }
+
+        function updateTimer() {
+            timerElement.textContent = timeLeft;
+            progressFill.style.width = (timeLeft / 60 * 100) + '%';
+
+            if (timeLeft <= 10) {
+                timerElement.classList.add('warning');
+            }
+        }
+
+        function startTimer() {
+            if (timerInterval) return;
+
+            startTime = Date.now();
+            isGameActive = true;
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimer();
+                updateStats();
+
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            isGameActive = false;
+            typingInput.disabled = true;
+
+            const elapsedMinutes = (Date.now() - startTime) / 60000;
+            const wordsTyped = correctCharsTyped / 5;
+            const wpm = Math.round(wordsTyped / elapsedMinutes);
+            const accuracy = totalCharsTyped > 0 ? Math.round((correctCharsTyped / totalCharsTyped) * 100) : 0;
+
+            finalWpm.textContent = wpm;
+            finalAccuracy.textContent = accuracy + '%';
+            totalCharsElement.textContent = totalCharsTyped;
+            correctCharsElement.textContent = correctCharsTyped;
+            incorrectCharsElement.textContent = incorrectCharsTyped;
+
+            testArea.classList.add('hidden');
+            resultsArea.classList.remove('hidden');
+        }
+
+        typingInput.addEventListener('input', (e) => {
+            if (!isGameActive) {
+                startTimer();
+            }
+
+            updateHighlighting();
+            updateStats();
+        });
+
+        typingInput.addEventListener('focus', () => {
+            textDisplay.classList.add('focus');
+        });
+
+        typingInput.addEventListener('blur', () => {
+            textDisplay.classList.remove('focus');
+        });
+
+        textDisplay.addEventListener('click', () => {
+            typingInput.focus();
+        });
+
+        restartBtn.addEventListener('click', initGame);
+
+        initGame();
+    </script>
+</body>
+</html>
