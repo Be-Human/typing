@@ -410,7 +410,7 @@
         function getBestWPM(timeMode) {
             const key = `typing_best_wpm_${timeMode}`;
             const stored = localStorage.getItem(key);
-            return stored ? parseInt(stored) : 0;
+            return stored ? parseInt(stored) : null;
         }
 
         function setBestWPM(timeMode, wpm) {
@@ -586,17 +586,26 @@
             const accuracy = totalCharsTyped > 0 ? Math.round((correctCharsTyped / totalCharsTyped) * 100) : 0;
 
             const currentBest = getBestWPM(currentTimeMode);
-            const isNewRecord = wpm > currentBest;
+            const hasRecord = currentBest !== null;
+            const isNewRecord = hasRecord && wpm > currentBest;
 
-            if (isNewRecord) {
+            if (isNewRecord || (!hasRecord && wpm > 0)) {
                 setBestWPM(currentTimeMode, wpm);
-                recordAlert.classList.remove('hidden');
+                if (isNewRecord) {
+                    recordAlert.classList.remove('hidden');
+                } else {
+                    recordAlert.classList.add('hidden');
+                }
             } else {
                 recordAlert.classList.add('hidden');
             }
 
             finalWpm.textContent = wpm;
-            bestWpm.textContent = isNewRecord ? wpm : currentBest;
+            bestWpm.textContent = hasRecord ? (isNewRecord ? wpm : currentBest) : '--';
+            
+            const bestWpmLabel = document.querySelector('#best-wpm').parentElement.querySelector('.label');
+            bestWpmLabel.textContent = `${currentTimeMode}秒最佳`;
+            
             finalAccuracy.textContent = accuracy + '%';
             totalCharsElement.textContent = totalCharsTyped;
             correctCharsElement.textContent = correctCharsTyped;
@@ -645,6 +654,13 @@
             button.addEventListener('click', () => {
                 const time = parseInt(button.dataset.time);
                 if (time !== currentTimeMode) {
+                    if (isGameActive) {
+                        const confirmSwitch = confirm('游戏进行中，切换时间模式将放弃当前进度，确定要切换吗？');
+                        if (!confirmSwitch) {
+                            return;
+                        }
+                    }
+                    
                     currentTimeMode = time;
                     
                     timeButtons.forEach(btn => btn.classList.remove('active'));
