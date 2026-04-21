@@ -258,6 +258,72 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             transition: width 0.3s;
         }
+
+        .error-analysis {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .error-analysis h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        .error-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .error-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .error-item:hover {
+            border-color: #ff6b6b;
+            transform: translateY(-2px);
+        }
+
+        .error-char {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #dc3545;
+            background: rgba(220, 53, 69, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .error-count {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .error-count strong {
+            color: #dc3545;
+        }
+
+        .no-errors {
+            text-align: center;
+            color: #28a745;
+            font-size: 1.1rem;
+            font-weight: bold;
+            padding: 10px;
+        }
     </style>
 </head>
 <body>
@@ -332,6 +398,12 @@
                     </div>
                 </div>
                 
+                <div class="error-analysis" id="error-analysis">
+                    <h3>错误键分析</h3>
+                    <div id="error-list" class="error-list"></div>
+                    <div id="no-errors" class="no-errors hidden">本次零错误，表现完美！</div>
+                </div>
+                
                 <button class="btn" id="restart-btn">重新开始</button>
             </div>
         </div>
@@ -378,6 +450,7 @@
         let accumulatedTotalChars = 0;
         let accumulatedCorrectChars = 0;
         let accumulatedIncorrectChars = 0;
+        let errorCharStats = {};
         let currentTimeMode = 60;
 
         const textDisplay = document.getElementById('text-display');
@@ -397,6 +470,8 @@
         const restartBtn = document.getElementById('restart-btn');
         const recordAlert = document.getElementById('record-alert');
         const timeButtons = document.querySelectorAll('.time-btn');
+        const errorList = document.getElementById('error-list');
+        const noErrors = document.getElementById('no-errors');
 
         function shuffleArray(array) {
             const shuffled = [...array];
@@ -443,6 +518,7 @@
             accumulatedTotalChars = 0;
             accumulatedCorrectChars = 0;
             accumulatedIncorrectChars = 0;
+            errorCharStats = {};
             startTime = null;
 
             if (timerInterval) {
@@ -477,6 +553,8 @@
                     correct++;
                 } else {
                     incorrect++;
+                    const targetChar = currentText[i];
+                    errorCharStats[targetChar] = (errorCharStats[targetChar] || 0) + 1;
                 }
             }
             
@@ -615,8 +693,41 @@
             correctCharsElement.textContent = correctCharsTyped;
             incorrectCharsElement.textContent = incorrectCharsTyped;
 
+            const typedText = typingInput.value;
+            for (let i = 0; i < typedText.length; i++) {
+                if (typedText[i] !== currentText[i]) {
+                    const targetChar = currentText[i];
+                    errorCharStats[targetChar] = (errorCharStats[targetChar] || 0) + 1;
+                }
+            }
+
+            displayErrorAnalysis();
+
             testArea.classList.add('hidden');
             resultsArea.classList.remove('hidden');
+        }
+
+        function displayErrorAnalysis() {
+            const errorEntries = Object.entries(errorCharStats);
+            
+            if (errorEntries.length === 0) {
+                errorList.classList.add('hidden');
+                noErrors.classList.remove('hidden');
+                return;
+            }
+
+            errorEntries.sort((a, b) => b[1] - a[1]);
+            const top5Errors = errorEntries.slice(0, 5);
+
+            errorList.innerHTML = top5Errors.map(([char, count]) => `
+                <div class="error-item">
+                    <span class="error-char">${char === ' ' ? '␣' : char}</span>
+                    <span class="error-count">错误 <strong>${count}</strong> 次</span>
+                </div>
+            `).join('');
+
+            errorList.classList.remove('hidden');
+            noErrors.classList.add('hidden');
         }
 
         typingInput.addEventListener('input', (e) => {
